@@ -7,8 +7,9 @@ use tracing::{debug, info};
 
 use crate::{
     action::Action,
-    components::{fps::FpsCounter, home::Home, Component},
+    components::{fps::FpsCounter, labyrinth::Labyrinth, Component},
     config::Config,
+    settings::{self, Settings},
     tui::{Event, Tui},
 };
 
@@ -28,20 +29,20 @@ pub struct App {
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Mode {
     #[default]
-    Home,
+    Labyrinth,
 }
 
 impl App {
-    pub fn new(tick_rate: f64, frame_rate: f64) -> Result<Self> {
+    pub fn new(settings: Settings) -> Result<Self> {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
         Ok(Self {
-            tick_rate,
-            frame_rate,
-            components: vec![Box::new(Home::new()), Box::new(FpsCounter::default())],
+            tick_rate: 4.0,
+            frame_rate: 60.0,
+            components: vec![Box::new(Labyrinth::new()), Box::new(FpsCounter::default())],
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,
-            mode: Mode::Home,
+            mode: Mode::Labyrinth,
             last_tick_key_events: Vec::new(),
             action_tx,
             action_rx,

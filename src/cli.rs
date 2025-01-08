@@ -1,17 +1,32 @@
+use std::path::PathBuf;
+
 use clap::Parser;
 
 use crate::config::{get_config_dir, get_data_dir};
+use crate::settings::Difficulty;
 
 #[derive(Parser, Debug)]
 #[command(author, version = version(), about)]
 pub struct Cli {
-    /// Tick rate, i.e. number of ticks per second
-    #[arg(short, long, value_name = "FLOAT", default_value_t = 4.0)]
-    pub tick_rate: f64,
+    /// Difficulty of the game, this will affect the size of maze and the scarcity of the words.
+    #[arg(short, long, value_enum)]
+    pub difficulty: Option<Difficulty>,
 
-    /// Frame rate, i.e. number of frames per second
-    #[arg(short, long, value_name = "FLOAT", default_value_t = 60.0)]
-    pub frame_rate: f64,
+    /// Height of the maze.
+    #[arg(long)]
+    pub height: Option<usize>,
+
+    /// Width of the maze.
+    #[arg(long)]
+    pub width: Option<usize>,
+
+    /// File path for the custom words.
+    #[arg(long, short)]
+    pub words_path: Option<PathBuf>,
+
+    /// Seed this will help reproduce mazes.
+    #[arg(long, short)]
+    pub seed: Option<u64>,
 }
 
 const VERSION_MESSAGE: &str = concat!(

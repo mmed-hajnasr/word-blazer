@@ -3,21 +3,22 @@ use ratatui::{prelude::*, widgets::*};
 use tokio::sync::mpsc::UnboundedSender;
 
 use super::Component;
-use crate::{action::Action, config::Config};
+use crate::{action::Action, config::Config, settings::Settings};
 
 #[derive(Default)]
-pub struct Home {
+pub struct Labyrinth {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
+    settings: Settings,
 }
 
-impl Home {
+impl Labyrinth {
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-impl Component for Home {
+impl Component for Labyrinth {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         self.command_tx = Some(tx);
         Ok(())
