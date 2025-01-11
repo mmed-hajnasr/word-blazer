@@ -9,7 +9,7 @@ use crate::{
     action::Action,
     components::{fps::FpsCounter, labyrinth::Labyrinth, Component},
     config::Config,
-    settings::{self, Settings},
+    settings::Settings,
     tui::{Event, Tui},
 };
 
@@ -38,7 +38,7 @@ impl App {
         Ok(Self {
             tick_rate: 4.0,
             frame_rate: 60.0,
-            components: vec![Box::new(Labyrinth::new()), Box::new(FpsCounter::default())],
+            components: vec![Box::new(Labyrinth::new(settings)), Box::new(FpsCounter::default())],
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,

@@ -3,3 +3,12 @@
 "<Ctrl-d>" = "Quit" # Another way to quit
 "<Ctrl-c>" = "Quit" # Yet another way to quit
 "<Ctrl-z>" = "Suspend" # Suspend the application
+"<l>" = "GoRight"
+"<h>" = "GoLeft"
+"<j>" = "GoDown"
+"<k>" = "GoUp"
+"<up>" = "GoUp"
+"<down>" = "GoDown"
+"<left>" = "GoLeft"
+"<right>" = "GoRight"
+"<enter>" = "Confirm"

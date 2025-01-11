@@ -2,11 +2,12 @@ use std::collections::{BTreeMap, VecDeque};
 
 #[derive(Default)]
 struct TrieNode {
-    children: BTreeMap<char, usize>,
+    pub children: BTreeMap<char, usize>,
     fallback_node: usize,
     output: Vec<usize>,
 }
 
+#[derive(Default)]
 pub struct Matcher {
     nodes: Vec<TrieNode>,
     current: usize,
@@ -56,10 +57,7 @@ impl Matcher {
             }
         }
 
-        Self {
-            nodes,
-            current: 0,
-        }
+        Self { nodes, current: 0 }
     }
 
     pub fn next(&mut self, c: &char) -> Vec<usize> {
@@ -74,8 +72,18 @@ impl Matcher {
         self.next(c)
     }
 
-    pub fn options(&self) -> Vec<char> {
-        self.nodes[self.current].children.keys().cloned().collect()
+    pub fn options(&self, state: usize) -> Vec<char> {
+        self.nodes[state].children.keys().cloned().collect()
+    }
+
+    pub fn next_state(&self, state: usize, c: char) -> usize {
+        if let Some(&next_state) = self.nodes[state].children.get(&c) {
+            return next_state;
+        }
+        if state == 0 {
+            return 0;
+        }
+        self.next_state(self.nodes[state].fallback_node, c)
     }
 }
 

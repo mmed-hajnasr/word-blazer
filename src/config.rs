@@ -13,18 +13,18 @@ use crate::{action::Action, app::Mode};
 
 const CONFIG: &str = include_str!("../.config/config.toml");
 
-#[derive(Clone, Debug, Deserialize, Default)]
-pub struct AppConfig {
-    #[serde(default)]
-    pub data_dir: PathBuf,
-    #[serde(default)]
-    pub config_dir: PathBuf,
-}
+// #[derive(Clone, Debug, Deserialize, Default)]
+// pub struct AppConfig {
+//     #[serde(default)]
+//     pub data_dir: PathBuf,
+//     #[serde(default)]
+//     pub config_dir: PathBuf,
+// }
 
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct Config {
-    #[serde(default, flatten)]
-    pub config: AppConfig,
+    // #[serde(default, flatten)]
+    // pub config: AppConfig,
     #[serde(default)]
     pub keybindings: KeyBindings,
     #[serde(default)]
@@ -226,6 +226,7 @@ fn parse_key_code_with_modifiers(
     Ok(KeyEvent::new(c, modifiers))
 }
 
+#[allow(dead_code)]
 pub fn key_event_to_string(key_event: &KeyEvent) -> String {
     let char;
     let key_code = match key_event.code {

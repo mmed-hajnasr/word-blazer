@@ -1,7 +1,7 @@
 use crate::cli::Cli;
 use clap::ValueEnum;
-use std::fs::read_to_string;
 use rand::random;
+use std::fs::read_to_string;
 
 const DEFAULT_WORDS: &str = include_str!("../resources/words-simple-1000.txt");
 
@@ -11,11 +11,13 @@ pub fn parse_words(contents: &str) -> Vec<String> {
 
 #[derive(Default)]
 pub struct Settings {
-    pub difficulty: Difficulty,
     pub height: usize,
     pub width: usize,
     pub words: Vec<String>,
     pub seed: u64,
+    pub word_porb: f64,
+    pub wall_nodes: usize,
+    pub nb_power_ups:usize,
 }
 
 #[derive(Default, Debug, Clone, ValueEnum)]
@@ -31,25 +33,31 @@ impl Settings {
         let seed: u64 = random();
         match difficulty {
             Difficulty::Easy => Self {
-                difficulty,
+                height: 10,
+                width: 10,
+                words: parse_words(DEFAULT_WORDS),
+                seed,
+                word_porb: 1.0,
+                wall_nodes: 3,
+                nb_power_ups: 4,
+            },
+            Difficulty::Normal => Self {
                 height: 30,
                 width: 30,
                 words: parse_words(DEFAULT_WORDS),
                 seed,
+                word_porb: 0.9,
+                wall_nodes: 7,
+                nb_power_ups: 50,
             },
-            Difficulty::Normal => Self {
-                difficulty,
+            Difficulty::Hard => Self {
                 height: 50,
                 width: 50,
                 words: parse_words(DEFAULT_WORDS),
                 seed,
-            },
-            Difficulty::Hard => Self {
-                difficulty,
-                height: 80,
-                width: 80,
-                words: parse_words(DEFAULT_WORDS),
-                seed,
+                word_porb: 0.9,
+                wall_nodes: 10,
+                nb_power_ups: 70,
             },
         }
     }
@@ -67,7 +75,8 @@ impl Settings {
         }
         if let Some(path) = args.words_path {
             settings.words = parse_words(
-                &read_to_string(path.clone()).unwrap_or_else(|_| panic!("Failed to read file: {:?}", path)),
+                &read_to_string(path.clone())
+                    .unwrap_or_else(|_| panic!("Failed to read file: {:?}", path)),
             );
         }
         settings
