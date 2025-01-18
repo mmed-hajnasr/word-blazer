@@ -217,14 +217,20 @@ impl Maze {
         maze.cells[i][j].exit = true;
 
         // TODO: make sure that no infinite loop happens due to lack of space.(also check coverage)
-        maze.player_location = (rng.gen_range(0..maze.height), rng.gen_range(0..maze.width));
+        let mut x = rng.gen_range(0..maze.height);
+        let mut y = rng.gen_range(0..maze.width);
+        maze.player_location = (x, y);
         while maze.shortest_route().is_none() {
-            maze.player_location = (rng.gen_range(0..maze.height), rng.gen_range(0..maze.width));
+            x = rng.gen_range(0..maze.height);
+            y = rng.gen_range(0..maze.width);
+            maze.player_location = (x, y);
         }
-        maze.cells[maze.player_location.0][maze.player_location.1].visited = true;
+        maze.cells[x][y].visited = true;
+        maze.cells[x][y].wall = false;
 
         for _ in 0..settings.nb_power_ups {
-            let mut to_up: (usize, usize) = (rng.gen_range(0..maze.height), rng.gen_range(0..maze.width));
+            let mut to_up: (usize, usize) =
+                (rng.gen_range(0..maze.height), rng.gen_range(0..maze.width));
             while maze.cells[to_up.0][to_up.1].wall
                 || maze.cells[to_up.0][to_up.1].exit
                 || maze.cells[to_up.0][to_up.1].power_up.is_some()

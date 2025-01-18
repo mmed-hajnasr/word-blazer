@@ -1,3 +1,5 @@
+use std::{cell, collections::BTreeSet};
+
 use super::Component;
 use crate::{
     action::Action,
@@ -24,6 +26,7 @@ pub struct Labyrinth {
     score: usize,
     steps: usize,
     notification: (Color, String),
+    notif_backup: String,
     lost: bool,
 }
 
@@ -32,7 +35,8 @@ impl Labyrinth {
         let mut ans = Self {
             maze: Maze::new(&settings),
             matcher: Matcher::new(settings.words.clone()),
-            notification: (Color::Reset, "Welcome to the maze".to_string()),
+            notification: (Color::Reset, "".to_string()),
+            notif_backup: "Welcome to the maze".to_string(),
             steps: settings.steps,
             words: settings.words,
             ..Default::default()
@@ -47,7 +51,7 @@ impl Labyrinth {
             self.notification.1 = power.description().to_string();
         } else {
             self.notification.0 = Color::Reset;
-            self.notification.1 = "Welcome to the maze".to_string();
+            self.notification.1 = self.notif_backup.clone();
         }
     }
 
@@ -56,12 +60,12 @@ impl Labyrinth {
         let y = self.visible.selected.1;
         let selected_cell: &MazeCell = &self.visible.cells[x][y];
         if selected_cell.wall {
-            self.notification.1 = "That's wall buddy, You're not that strong.".to_string();
+            self.notif_backup = "That's wall buddy, You're not that strong.".to_string();
             return;
         }
         let center: usize = self.visible.cells.len() / 2;
         if center.abs_diff(x) > 1 || center.abs_diff(y) > 1 {
-            self.notification.1 = "That's too far try something closer.".to_string();
+            self.notif_backup = "That's too far try something closer.".to_string();
             return;
         }
 
@@ -69,11 +73,19 @@ impl Labyrinth {
         let x = self.maze.player_location.0 + x - center;
         let y = self.maze.player_location.1 + y - center;
         self.maze.player_location = (x, y);
-        if let Some(power) = selected_cell.power_up {
+        let current_cell: &mut MazeCell = &mut self.maze.cells[x][y];
+        if current_cell.visited {
+            // check if the player lost.
+            self.steps -= 1;
+            if self.steps == 0 {
+                self.lost = true;
+            }
+            return;
+        }
+        if let Some(power) = current_cell.power_up {
             self.player_state.push((5, power));
         }
 
-        let current_cell: &mut MazeCell = &mut self.maze.cells[x][y];
         // get the score from words.
         current_cell.visited = true;
         let found_words: Vec<String> = self
@@ -91,9 +103,9 @@ impl Labyrinth {
             );
             let mut added_score: usize = found_words.iter().map(|s| s.len() * s.len()).sum();
             added_score *= draupnir_bonus;
-            self.notification.1 = "Congrats You found the word:".to_string()
-                + &found_words.join(", ")
-                + " and you got "
+            self.notif_backup = "Congrats You found the word: \"".to_string()
+                + &found_words.join("\", \"")
+                + "\" and that gave you "
                 + &added_score.to_string()
                 + " steps.";
             self.score += added_score;
@@ -123,6 +135,8 @@ impl Labyrinth {
         let row_end = (player_row + sight_radius).min(height - 1);
         let col_start = player_col.saturating_sub(sight_radius);
         let col_end = (player_col + sight_radius).min(width - 1);
+        let x_indent = sight_radius.saturating_sub(player_row);
+        let y_indent = sight_radius.saturating_sub(player_col);
 
         let dimention = 2 * sight_radius + 1;
         let mut visibility_grid = vec![vec![MazeCell::wall(); dimention]; dimention];
@@ -130,8 +144,8 @@ impl Labyrinth {
         for i in row_start..=row_end {
             for j in col_start..=col_end {
                 // Convert maze coordinates to visibility grid coordinates
-                let grid_row = i.saturating_sub(row_start);
-                let grid_col = j.saturating_sub(col_start);
+                let grid_row = i.saturating_sub(row_start) + x_indent;
+                let grid_col = j.saturating_sub(col_start) + y_indent;
 
                 if i < height && j < width {
                     visibility_grid[grid_row][grid_col] = self.maze.cells[i][j].clone();
@@ -143,6 +157,10 @@ impl Labyrinth {
             cells: visibility_grid,
             selected: (dimention / 2, dimention / 2),
             thread: vec![],
+            offset: (
+                player_row as i32 - sight_radius as i32,
+                player_col as i32 - sight_radius as i32,
+            ),
         }
     }
 }
@@ -152,29 +170,30 @@ impl From<&VisibleArea> for Table<'_> {
         let width: usize = visible.cells[0].len();
         let widths = vec![Constraint::Length(3); width];
         let mid: usize = visible.cells.len() / 2;
+        let n: i32 = visible.cells.len() as i32;
+        let m: i32 = visible.cells[0].len() as i32;
 
-        let table: Table = visible
+        let mut cells: Vec<Vec<Cell>> = visible
             .cells
             .iter()
-            .enumerate()
-            .map(|(row_idx, row)| {
-                row.iter()
-                    .enumerate()
-                    .map(|(col_idx, cell)| {
-                        let cell = if row_idx == mid && col_idx == mid {
-                            Cell::new(" ◎ ")
-                        } else {
-                            Cell::from(cell)
-                        };
-                        if row_idx == visible.selected.0 && col_idx == visible.selected.1 {
-                            cell.reversed()
-                        } else {
-                            cell
-                        }
-                    })
-                    .collect::<Row>()
-            })
+            .map(|row| row.iter().map(Cell::from).collect::<Vec<Cell>>())
             .collect();
+        cells[mid][mid] = Cell::new(" ◎ ");
+        cells[visible.selected.0][visible.selected.1] = cells[visible.selected.0]
+            [visible.selected.1]
+            .clone()
+            .reversed();
+
+        for &(x, y) in visible.thread.iter() {
+            let vx: i32 = x - visible.offset.0;
+            let vy: i32 = y - visible.offset.0;
+            if vx >= 0 && vx < n && vy >= 0 && vy < m {
+                let vx: usize = vx as usize;
+                let vy: usize = vy as usize;
+                cells[vx][vy] = cells[vx][vy].clone().bg(Color::Yellow)
+            }
+        }
+        let table: Table = cells.iter().map(|row| Row::new(row.clone())).collect();
         table.column_spacing(0).widths(widths)
     }
 }
@@ -299,12 +318,16 @@ impl Component for Labyrinth {
 struct VisibleArea {
     cells: Vec<Vec<MazeCell>>,
     selected: (usize, usize),
-    thread: Vec<(usize, usize)>,
+    thread: Vec<(i32, i32)>,
+    offset: (i32, i32),
 }
 
 impl VisibleArea {
     fn get_powerup(&self) -> Option<PowerUP> {
         let (i, j) = self.selected;
+        if !self.cells[i][j].visited {
+            return None;
+        }
         self.cells[i][j].power_up
     }
 }
