@@ -17,7 +17,8 @@ pub struct Settings {
     pub seed: u64,
     pub word_porb: f64,
     pub wall_nodes: usize,
-    pub nb_power_ups:usize,
+    pub nb_power_ups: usize,
+    pub steps: usize,
 }
 
 #[derive(Default, Debug, Clone, ValueEnum)]
@@ -36,6 +37,7 @@ impl Settings {
                 height: 10,
                 width: 10,
                 words: parse_words(DEFAULT_WORDS),
+                steps: 10,
                 seed,
                 word_porb: 1.0,
                 wall_nodes: 3,
@@ -44,6 +46,7 @@ impl Settings {
             Difficulty::Normal => Self {
                 height: 30,
                 width: 30,
+                steps: 20,
                 words: parse_words(DEFAULT_WORDS),
                 seed,
                 word_porb: 0.9,
@@ -53,6 +56,7 @@ impl Settings {
             Difficulty::Hard => Self {
                 height: 50,
                 width: 50,
+                steps: 20,
                 words: parse_words(DEFAULT_WORDS),
                 seed,
                 word_porb: 0.9,
@@ -64,6 +68,9 @@ impl Settings {
 
     pub fn build(args: Cli) -> Self {
         let mut settings: Settings = Settings::new(args.difficulty.unwrap_or(Difficulty::Normal));
+        if let Some(s) = args.steps {
+            settings.steps = s;
+        }
         if let Some(h) = args.height {
             settings.height = h;
         }
@@ -73,7 +80,7 @@ impl Settings {
         if let Some(seed) = args.seed {
             settings.seed = seed;
         }
-        if let Some(path) = args.words_path {
+        if let Some(path) = args.path {
             settings.words = parse_words(
                 &read_to_string(path.clone())
                     .unwrap_or_else(|_| panic!("Failed to read file: {:?}", path)),

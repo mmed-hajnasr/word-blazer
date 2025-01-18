@@ -25,7 +25,7 @@ const POWERUPS: [PowerUP; 6] = [
     PowerUP::BifrostBridge,
 ];
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum PowerUP {
     AriadneThread,
     HeliosTorch,
@@ -38,12 +38,12 @@ pub enum PowerUP {
 impl PowerUP {
     pub fn description(&self) -> &str {
         match self {
-            PowerUP::AriadneThread => "Magical thread that guides you through the maze, as it guided Theseus through the Labyrinth.",
-            PowerUP::HeliosTorch => "Illuminates dark areas with the brilliant light of the sun god's torch.",
-            PowerUP::ProteusGift => "Transforms into the character you need most, channeling Proteus' shapeshifting abilities.",
-            PowerUP::OdinDraupnir => "Multiplies by 8 your score with the power of Odin's self-replicating ring.",
-            PowerUP::ThorMjolnir => "Destroys all walls within 3 cells radius, channeling Thor's mighty hammer Mjolnir.",
-            PowerUP::BifrostBridge => "Teleports you to a random position in the maze, using the power of the rainbow bridge that connects realms.",
+            PowerUP::AriadneThread => "Ariadne's thread : Magical thread that guides you through the maze, as it guided Theseus through the Labyrinth.",
+            PowerUP::HeliosTorch => "The torch of helios : Illuminates dark areas with the brilliant light of the sun god's torch.",
+            PowerUP::ProteusGift => "Proteus's Gift : Transforms into the character you need most, channeling Proteus' shapeshifting abilities.",
+            PowerUP::OdinDraupnir => "Draupnir : Multiplies by 8 your score with the power of Odin's self-replicating ring.",
+            PowerUP::ThorMjolnir => "Thor's hammer : Destroys all walls within 3 cells radius, channeling Thor's mighty hammer Mjolnir.",
+            PowerUP::BifrostBridge => "The BifrostBridge : Teleports you to a random position in the maze, using the power of the rainbow bridge that connects realms.",
         }
     }
 
@@ -68,33 +68,22 @@ pub struct MazeCell {
     pub exit: bool,
 }
 
+impl MazeCell {
+    /// use the new() function to get walled cell.
+    pub fn wall() -> Self {
+        Self {
+            wall: true,
+            ..Default::default()
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct Maze {
     pub cells: Vec<Vec<MazeCell>>,
     pub player_location: (usize, usize),
-    pub n: usize,
-    pub m: usize,
-}
-
-impl std::fmt::Display for Maze {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut result = String::new();
-        for i in 0..self.n {
-            for j in 0..self.m {
-                if self.cells[i][j].visited {
-                    result.push('*');
-                } else if self.cells[i][j].wall {
-                    result.push('#');
-                } else {
-                    result.push(self.cells[i][j].value);
-                }
-                result.push(' ');
-            }
-            result.push('\n');
-            result.push('\n');
-        }
-        write!(f, "{}", result)
-    }
+    pub height: usize,
+    pub width: usize,
 }
 
 impl Maze {
@@ -111,7 +100,7 @@ impl Maze {
         }
         let i = new_i as usize;
         let j = new_j as usize;
-        if i < self.n && j < self.m && !self.cells[i][j].wall {
+        if i < self.height && j < self.width && !self.cells[i][j].wall {
             return Some((new_i as usize, new_j as usize));
         }
         None
@@ -190,7 +179,7 @@ impl Maze {
     }
 
     pub fn shortest_route(&self) -> Option<usize> {
-        let mut vis: Vec<Vec<bool>> = vec![vec![false; self.m]; self.n];
+        let mut vis: Vec<Vec<bool>> = vec![vec![false; self.width]; self.height];
         self.dfs(self.player_location.0, self.player_location.1, &mut vis, 0)
     }
 
@@ -201,8 +190,8 @@ impl Maze {
 
         // first we fill the characters of the maze using dfs and rand.
         let mut maze = Self {
-            n,
-            m,
+            height: n,
+            width: m,
             cells: vec![vec![MazeCell::default(); m]; n],
             player_location: (0, 0),
         };
@@ -215,32 +204,33 @@ impl Maze {
         );
 
         for _ in 0..settings.wall_nodes {
-            let i: usize = rng.gen_range(0..maze.n);
-            let j: usize = rng.gen_range(0..maze.m);
+            let i: usize = rng.gen_range(0..maze.height);
+            let j: usize = rng.gen_range(0..maze.width);
             let direction: usize = rng.gen_range(0..8);
             maze.make_wall(i, j, direction, &mut rng);
             maze.make_wall(i, j, (direction + 4) % 8, &mut rng);
         }
 
-        let i: usize = rng.gen_range(0..maze.n);
-        let j: usize = rng.gen_range(0..maze.m);
+        let i: usize = rng.gen_range(0..maze.height);
+        let j: usize = rng.gen_range(0..maze.width);
         maze.cells[i][j].wall = false;
         maze.cells[i][j].exit = true;
 
         // TODO: make sure that no infinite loop happens due to lack of space.(also check coverage)
-        maze.player_location = (rng.gen_range(0..maze.n), rng.gen_range(0..maze.m));
+        maze.player_location = (rng.gen_range(0..maze.height), rng.gen_range(0..maze.width));
         while maze.shortest_route().is_none() {
-            maze.player_location = (rng.gen_range(0..maze.n), rng.gen_range(0..maze.m));
+            maze.player_location = (rng.gen_range(0..maze.height), rng.gen_range(0..maze.width));
         }
+        maze.cells[maze.player_location.0][maze.player_location.1].visited = true;
 
         for _ in 0..settings.nb_power_ups {
-            let mut to_up: (usize, usize) = (rng.gen_range(0..maze.n), rng.gen_range(0..maze.m));
+            let mut to_up: (usize, usize) = (rng.gen_range(0..maze.height), rng.gen_range(0..maze.width));
             while maze.cells[to_up.0][to_up.1].wall
                 || maze.cells[to_up.0][to_up.1].exit
                 || maze.cells[to_up.0][to_up.1].power_up.is_some()
                 || to_up == maze.player_location
             {
-                to_up = (rng.gen_range(0..maze.n), rng.gen_range(0..maze.m));
+                to_up = (rng.gen_range(0..maze.height), rng.gen_range(0..maze.width));
             }
             maze.cells[to_up.0][to_up.1].power_up = Some(*POWERUPS.choose(&mut rng).unwrap());
         }

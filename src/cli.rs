@@ -12,6 +12,10 @@ pub struct Cli {
     #[arg(short, long, value_enum)]
     pub difficulty: Option<Difficulty>,
 
+    /// The number of steps given initially to the player.
+    #[arg(long)]
+    pub steps: Option<usize>,
+
     /// Height of the maze.
     #[arg(long)]
     pub height: Option<usize>,
@@ -22,10 +26,10 @@ pub struct Cli {
 
     /// File path for the custom words.
     #[arg(long, short)]
-    pub words_path: Option<PathBuf>,
+    pub path: Option<PathBuf>,
 
     /// Seed this will help reproduce mazes.
-    #[arg(long, short)]
+    #[arg(long)]
     pub seed: Option<u64>,
 }
 

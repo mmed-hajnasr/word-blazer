@@ -1,12 +1,10 @@
+use app::App;
 use clap::Parser;
 use cli::Cli;
 use color_eyre::Result;
 use settings::Settings;
 
-use crate::app::App;
-
 mod action;
-mod maze;
 mod app;
 mod cli;
 mod components;
@@ -14,6 +12,7 @@ mod config;
 mod errors;
 mod logging;
 mod matcher;
+mod maze;
 mod settings;
 mod tui;
 
