@@ -1,4 +1,8 @@
-use std::{cell, collections::BTreeSet};
+use rand::{thread_rng, Rng};
+use std::{
+    cmp::{max, min},
+    collections::BTreeSet,
+};
 
 use super::Component;
 use crate::{
@@ -13,6 +17,7 @@ use ratatui::{prelude::*, widgets::*};
 use tokio::sync::mpsc::UnboundedSender;
 
 const LOST_MESSAGE: &str = include_str!("../../resources/lost_message.txt");
+const WIN_MESSAGE: &str = include_str!("../../resources/win_message.txt");
 
 #[derive(Default)]
 pub struct Labyrinth {
@@ -28,6 +33,7 @@ pub struct Labyrinth {
     notification: (Color, String),
     notif_backup: String,
     lost: bool,
+    won: bool,
 }
 
 impl Labyrinth {
@@ -73,17 +79,29 @@ impl Labyrinth {
         let x = self.maze.player_location.0 + x - center;
         let y = self.maze.player_location.1 + y - center;
         self.maze.player_location = (x, y);
+        if !self.visible.thread.remove(&(x as i32, y as i32)) {
+            self.visible.thread = BTreeSet::new();
+        }
+        self.player_state = self
+            .player_state
+            .iter()
+            .filter(|&(l, _)| *l > 0)
+            .map(|&(l, p)| (l - 1, p))
+            .collect();
+
+        if let Some(power) = self.maze.cells[x][y].power_up {
+            self.apply_power_up(power);
+        }
+
         let current_cell: &mut MazeCell = &mut self.maze.cells[x][y];
         if current_cell.visited {
+            self.matcher.reset();
             // check if the player lost.
             self.steps -= 1;
             if self.steps == 0 {
                 self.lost = true;
             }
             return;
-        }
-        if let Some(power) = current_cell.power_up {
-            self.player_state.push((5, power));
         }
 
         // get the score from words.
@@ -111,6 +129,10 @@ impl Labyrinth {
             self.score += added_score;
             self.steps += added_score;
         }
+        if current_cell.exit {
+            self.won = true;
+            return;
+        }
 
         // check if the player lost.
         self.steps -= 1;
@@ -127,16 +149,16 @@ impl Labyrinth {
             .filter(|(_, power)| power == &PowerUP::HeliosTorch)
             .count();
 
-        let (player_row, player_col) = self.maze.player_location;
+        let (x, y) = self.maze.player_location;
         let (height, width) = (self.maze.height, self.maze.width);
 
         // Calculate visible bounds
-        let row_start = player_row.saturating_sub(sight_radius);
-        let row_end = (player_row + sight_radius).min(height - 1);
-        let col_start = player_col.saturating_sub(sight_radius);
-        let col_end = (player_col + sight_radius).min(width - 1);
-        let x_indent = sight_radius.saturating_sub(player_row);
-        let y_indent = sight_radius.saturating_sub(player_col);
+        let row_start = x.saturating_sub(sight_radius);
+        let row_end = (x + sight_radius).min(height - 1);
+        let col_start = y.saturating_sub(sight_radius);
+        let col_end = (y + sight_radius).min(width - 1);
+        let x_indent = sight_radius.saturating_sub(x);
+        let y_indent = sight_radius.saturating_sub(y);
 
         let dimention = 2 * sight_radius + 1;
         let mut visibility_grid = vec![vec![MazeCell::wall(); dimention]; dimention];
@@ -156,11 +178,48 @@ impl Labyrinth {
         self.visible = VisibleArea {
             cells: visibility_grid,
             selected: (dimention / 2, dimention / 2),
-            thread: vec![],
+            thread: self.visible.thread.clone(),
             offset: (
-                player_row as i32 - sight_radius as i32,
-                player_col as i32 - sight_radius as i32,
+                x as i32 - sight_radius as i32,
+                y as i32 - sight_radius as i32,
             ),
+        }
+    }
+
+    fn apply_power_up(&mut self, power: PowerUP) {
+        match power {
+            PowerUP::AriadneThread => self.visible.thread = self.maze.shortest_route().unwrap(),
+            PowerUP::ThorMjolnir => {
+                let (x, y) = self.maze.player_location;
+                let n = self.maze.height;
+                let m = self.maze.width;
+                for i in x.saturating_sub(3)..=(x + 3) {
+                    if i >= n {
+                        break;
+                    }
+                    for j in y.saturating_sub(3)..=(y + 3) {
+                        if j >= m {
+                            break;
+                        }
+                        self.maze.cells[i][j].wall = false;
+                    }
+                }
+            }
+            PowerUP::BifrostBridge => {
+                let mut rng = thread_rng();
+                let mut x = rng.gen_range(0..self.maze.height);
+                let mut y = rng.gen_range(0..self.maze.width);
+                self.maze.player_location = (x, y);
+                while self.maze.cells[x][y].exit || self.maze.shortest_route().is_none() {
+                    x = rng.gen_range(0..self.maze.height);
+                    y = rng.gen_range(0..self.maze.width);
+                    self.maze.player_location = (x, y);
+                }
+                self.maze.cells[x][y].visited = true;
+                self.maze.cells[x][y].wall = false;
+            }
+            // PowerUP::ProteusGift => {},
+            _ => self.player_state.push((5, power)),
         }
     }
 }
@@ -186,7 +245,7 @@ impl From<&VisibleArea> for Table<'_> {
 
         for &(x, y) in visible.thread.iter() {
             let vx: i32 = x - visible.offset.0;
-            let vy: i32 = y - visible.offset.0;
+            let vy: i32 = y - visible.offset.1;
             if vx >= 0 && vx < n && vy >= 0 && vy < m {
                 let vx: usize = vx as usize;
                 let vy: usize = vy as usize;
@@ -229,20 +288,17 @@ impl Component for Labyrinth {
     }
 
     fn update(&mut self, action: Action) -> Result<Option<Action>> {
+        let center: usize = self.visible.cells.len() / 2;
         match action {
-            Action::GoUp => {
-                self.visible.selected.0 = self.visible.selected.0.saturating_sub(1);
-            }
+            Action::GoUp => self.visible.selected.0 = max(self.visible.selected.0 - 1, center - 1),
             Action::GoDown => {
-                self.visible.selected.0 =
-                    (self.visible.selected.0 + 1).min(self.visible.cells.len() - 1);
+                self.visible.selected.0 = min(self.visible.selected.0 + 1, center + 1)
             }
             Action::GoLeft => {
-                self.visible.selected.1 = self.visible.selected.1.saturating_sub(1);
+                self.visible.selected.1 = max(self.visible.selected.1 - 1, center - 1)
             }
             Action::GoRight => {
-                self.visible.selected.1 =
-                    (self.visible.selected.1 + 1).min(self.visible.cells[0].len() - 1);
+                self.visible.selected.1 = min(self.visible.selected.1 + 1, center + 1)
             }
             Action::Confirm => {
                 self.confirm();
@@ -260,6 +316,16 @@ impl Component for Labyrinth {
                 .fg(Color::Red)
                 .block(Block::default().borders(Borders::ALL))
                 .alignment(Alignment::Center);
+            frame.render_widget(lost_board, area);
+            return Ok(());
+        }
+        if self.won {
+            let lost_board = Paragraph::new(
+                WIN_MESSAGE.to_owned() + "\nyou're score is " + &self.score.to_string(),
+            )
+            .fg(Color::Green)
+            .block(Block::default().borders(Borders::ALL))
+            .alignment(Alignment::Center);
             frame.render_widget(lost_board, area);
             return Ok(());
         }
@@ -318,14 +384,14 @@ impl Component for Labyrinth {
 struct VisibleArea {
     cells: Vec<Vec<MazeCell>>,
     selected: (usize, usize),
-    thread: Vec<(i32, i32)>,
+    thread: BTreeSet<(i32, i32)>,
     offset: (i32, i32),
 }
 
 impl VisibleArea {
     fn get_powerup(&self) -> Option<PowerUP> {
         let (i, j) = self.selected;
-        if !self.cells[i][j].visited {
+        if self.cells[i][j].visited {
             return None;
         }
         self.cells[i][j].power_up

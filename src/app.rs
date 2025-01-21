@@ -3,7 +3,7 @@ use crossterm::event::KeyEvent;
 use ratatui::prelude::Rect;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
-use tracing::{debug, info};
+use tracing::info;
 
 use crate::{
     action::Action,
@@ -38,7 +38,10 @@ impl App {
         Ok(Self {
             tick_rate: 4.0,
             frame_rate: 60.0,
-            components: vec![Box::new(Labyrinth::new(settings)), Box::new(FpsCounter::default())],
+            components: vec![
+                Box::new(Labyrinth::new(settings)),
+                Box::new(FpsCounter::default()),
+            ],
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,
@@ -134,7 +137,7 @@ impl App {
     fn handle_actions(&mut self, tui: &mut Tui) -> Result<()> {
         while let Ok(action) = self.action_rx.try_recv() {
             if action != Action::Tick && action != Action::Render {
-                debug!("{action:?}");
+                // debug!("{action:?}");
             }
             match action {
                 Action::Tick => {

@@ -85,6 +85,10 @@ impl Matcher {
         }
         self.next_state(self.nodes[state].fallback_node, c)
     }
+
+    pub fn reset(&mut self) {
+        self.current = 0;
+    }
 }
 
 #[cfg(test)]

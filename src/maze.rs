@@ -1,6 +1,7 @@
 use crate::{matcher::Matcher, settings::Settings};
 use rand::{rngs::StdRng, seq::SliceRandom, Rng, SeedableRng};
 use ratatui::style::Color;
+use std::collections::{BTreeSet, VecDeque};
 
 const ALPHABET: [char; 26] = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
@@ -16,10 +17,10 @@ const DIRECTIONS: [(i32, i32); 8] = [
     (-1, -1),
     (-1, 0),
 ];
-const POWERUPS: [PowerUP; 6] = [
+const POWERUPS: [PowerUP; 5] = [
     PowerUP::AriadneThread,
     PowerUP::HeliosTorch,
-    PowerUP::ProteusGift,
+    // PowerUP::ProteusGift,
     PowerUP::OdinDraupnir,
     PowerUP::ThorMjolnir,
     PowerUP::BifrostBridge,
@@ -29,7 +30,7 @@ const POWERUPS: [PowerUP; 6] = [
 pub enum PowerUP {
     AriadneThread,
     HeliosTorch,
-    ProteusGift,
+    // ProteusGift,
     OdinDraupnir,
     ThorMjolnir,
     BifrostBridge,
@@ -40,7 +41,7 @@ impl PowerUP {
         match self {
             PowerUP::AriadneThread => "Ariadne's thread : Magical thread that guides you through the maze, as it guided Theseus through the Labyrinth.",
             PowerUP::HeliosTorch => "The torch of helios : Illuminates dark areas with the brilliant light of the sun god's torch.",
-            PowerUP::ProteusGift => "Proteus's Gift : Transforms into the character you need most, channeling Proteus' shapeshifting abilities.",
+            // PowerUP::ProteusGift => "Proteus's Gift : Transforms into the character you need most, channeling Proteus' shapeshifting abilities.",
             PowerUP::OdinDraupnir => "Draupnir : Multiplies by 8 your score with the power of Odin's self-replicating ring.",
             PowerUP::ThorMjolnir => "Thor's hammer : Destroys all walls within 3 cells radius, channeling Thor's mighty hammer Mjolnir.",
             PowerUP::BifrostBridge => "The BifrostBridge : Teleports you to a random position in the maze, using the power of the rainbow bridge that connects realms.",
@@ -51,10 +52,10 @@ impl PowerUP {
         match self {
             PowerUP::AriadneThread => Color::Yellow,
             PowerUP::HeliosTorch => Color::Red,
-            PowerUP::ProteusGift => Color::Green,
-            PowerUP::OdinDraupnir => Color::Magenta,
+            // PowerUP::ProteusGift => Color::Green,
+            PowerUP::OdinDraupnir => Color::Green,
             PowerUP::ThorMjolnir => Color::Blue,
-            PowerUP::BifrostBridge => Color::Cyan,
+            PowerUP::BifrostBridge => Color::Magenta,
         }
     }
 }
@@ -160,27 +161,48 @@ impl Maze {
         }
     }
 
-    fn dfs(&self, i: usize, j: usize, vis: &mut Vec<Vec<bool>>, depth: usize) -> Option<usize> {
-        vis[i][j] = true;
-        if self.cells[i][j].exit {
-            return Some(depth);
-        }
-        for direction in 0..8 {
-            if let Some((new_i, new_j)) = self.valid_coordenates((i, j), direction) {
-                if vis[new_i][new_j] {
-                    continue;
-                }
-                if let Some(ans) = self.dfs(new_i, new_j, vis, depth + 1) {
-                    return Some(ans);
+    pub fn shortest_route(&self) -> Option<BTreeSet<(i32, i32)>> {
+        // we are using bfs to find the shortest path.
+        let mut vis: Vec<Vec<bool>> = vec![vec![false; self.width]; self.height];
+        let mut next_direction: Vec<Vec<Option<usize>>> = vec![vec![None; self.width]; self.height];
+        let mut stack: VecDeque<(usize, usize)> =
+            VecDeque::from([(self.player_location.0, self.player_location.1)]);
+        let mut exit: Option<(usize, usize)> = None;
+        while let Some((x, y)) = stack.pop_front() {
+            if vis[x][y] {
+                continue;
+            }
+            vis[x][y] = true;
+            if self.cells[x][y].exit {
+                exit = Some((x, y));
+                break;
+            }
+            for d in 0..8 {
+                if let Some((next_x, next_y)) = self.valid_coordenates((x, y), d) {
+                    if vis[next_x][next_y] || next_direction[next_x][next_y].is_some() {
+                        continue;
+                    }
+                    next_direction[next_x][next_y] = Some((d + 4) % 8);
+                    stack.push_back((next_x, next_y));
                 }
             }
         }
-        None
-    }
-
-    pub fn shortest_route(&self) -> Option<usize> {
-        let mut vis: Vec<Vec<bool>> = vec![vec![false; self.width]; self.height];
-        self.dfs(self.player_location.0, self.player_location.1, &mut vis, 0)
+        let (mut x, mut y) = exit?;
+        let mut ans: BTreeSet<(i32, i32)> = BTreeSet::from([(x as i32, y as i32)]);
+        while let Some(d) = next_direction[x][y] {
+            (x, y) = self.valid_coordenates((x, y), d)?;
+            ans.insert((x as i32, y as i32));
+        }
+        ans.remove(&(self.player_location.0 as i32, self.player_location.1 as i32));
+        // debug!(
+        //     "{} : {}",
+        //     ans.iter()
+        //         .map(|(x, y)| format!("({},{})", x, y))
+        //         .collect::<Vec<String>>()
+        //         .join(" -> "),
+        //     ans.len()
+        // );
+        Some(ans)
     }
 
     pub fn new(settings: &Settings) -> Self {
@@ -216,11 +238,13 @@ impl Maze {
         maze.cells[i][j].wall = false;
         maze.cells[i][j].exit = true;
 
-        // TODO: make sure that no infinite loop happens due to lack of space.(also check coverage)
         let mut x = rng.gen_range(0..maze.height);
         let mut y = rng.gen_range(0..maze.width);
         maze.player_location = (x, y);
-        while maze.shortest_route().is_none() {
+        while {
+            let route = maze.shortest_route();
+            maze.cells[x][y].exit || route.is_none() || route.unwrap().len() > (n + m) / 3
+        } {
             x = rng.gen_range(0..maze.height);
             y = rng.gen_range(0..maze.width);
             maze.player_location = (x, y);

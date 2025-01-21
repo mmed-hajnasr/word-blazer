@@ -1,9 +1,12 @@
 use crate::cli::Cli;
 use clap::ValueEnum;
 use rand::random;
+use tracing::debug;
 use std::fs::read_to_string;
 
-const DEFAULT_WORDS: &str = include_str!("../resources/words-simple-1000.txt");
+const DEFAULT_WORDS: &str = include_str!("../resources/all-words-5200.txt");
+const SIMPLE_WORDS: &str = include_str!("../resources/words-simple-1000.txt");
+const HARD_WORD: &str = include_str!("../resources/long-words-5000.txt");
 
 pub fn parse_words(contents: &str) -> Vec<String> {
     contents.lines().map(|line| line.to_string()).collect()
@@ -32,16 +35,17 @@ pub enum Difficulty {
 impl Settings {
     fn new(difficulty: Difficulty) -> Self {
         let seed: u64 = random();
+        debug!("the seed is {}",seed);
         match difficulty {
             Difficulty::Easy => Self {
                 height: 10,
                 width: 10,
-                words: parse_words(DEFAULT_WORDS),
+                words: parse_words(SIMPLE_WORDS),
                 steps: 10,
                 seed,
                 word_porb: 1.0,
                 wall_nodes: 3,
-                nb_power_ups: 4,
+                nb_power_ups: 10,
             },
             Difficulty::Normal => Self {
                 height: 30,
@@ -49,19 +53,19 @@ impl Settings {
                 steps: 20,
                 words: parse_words(DEFAULT_WORDS),
                 seed,
-                word_porb: 0.9,
-                wall_nodes: 7,
-                nb_power_ups: 50,
+                word_porb: 1.0,
+                wall_nodes: 10,
+                nb_power_ups: 20,
             },
             Difficulty::Hard => Self {
                 height: 50,
                 width: 50,
                 steps: 20,
-                words: parse_words(DEFAULT_WORDS),
+                words: parse_words(HARD_WORD),
                 seed,
                 word_porb: 0.9,
                 wall_nodes: 10,
-                nb_power_ups: 70,
+                nb_power_ups: 50,
             },
         }
     }
