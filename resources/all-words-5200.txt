@@ -3649,6 +3649,8 @@ quill
 quit
 quite
 quotient
+rally
+rebel
 rabble
 race
 rack
@@ -4599,6 +4601,7 @@ sympathy
 symphony
 symptom
 system
+tiger
 tabernacle
 table
 tablet

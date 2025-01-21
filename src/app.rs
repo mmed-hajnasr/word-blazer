@@ -7,7 +7,7 @@ use tracing::info;
 
 use crate::{
     action::Action,
-    components::{fps::FpsCounter, labyrinth::Labyrinth, Component},
+    components::{labyrinth::Labyrinth, Component},
     config::Config,
     settings::Settings,
     tui::{Event, Tui},
@@ -38,10 +38,7 @@ impl App {
         Ok(Self {
             tick_rate: 4.0,
             frame_rate: 60.0,
-            components: vec![
-                Box::new(Labyrinth::new(settings)),
-                Box::new(FpsCounter::default()),
-            ],
+            components: vec![Box::new(Labyrinth::new(settings))],
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,

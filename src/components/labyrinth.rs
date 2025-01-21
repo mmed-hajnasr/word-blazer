@@ -119,7 +119,7 @@ impl Labyrinth {
                     .filter(|(_, p)| *p == PowerUP::OdinDraupnir)
                     .count() as u32,
             );
-            let mut added_score: usize = found_words.iter().map(|s| s.len() * s.len()).sum();
+            let mut added_score: usize = found_words.iter().map(|s| Self::score(s)).sum();
             added_score *= draupnir_bonus;
             self.notif_backup = "Congrats You found the word: \"".to_string()
                 + &found_words.join("\", \"")
@@ -139,6 +139,11 @@ impl Labyrinth {
         if self.steps == 0 {
             self.lost = true;
         }
+    }
+
+    fn score(s: &str) -> usize {
+        let l = s.len() + 2;
+        l * (l / 3)
     }
 
     fn update_visual(&mut self) {
