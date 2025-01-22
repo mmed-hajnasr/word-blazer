@@ -11,17 +11,14 @@ a TUI Labyrinth game that takes advatage of multiple graph alguorithms.
 > [!TIP]
 >
 > The game follows the font and colors of your terminal emulator.
->
 
 | ![dark demo](./resources/dark-demo.png) | ![light demo](./resources/light-demo.png) |
 | --------------------------------------- | ----------------------------------------- |
 
 ## How to play
 
-Navigate the labyrinth to find the exit "★".
-
-- Explore the maze systematically to discover the exit without running out of steps.
-- Form words using the letters encountered within the maze to replenish your step count and add to your score.
+Navigate through the labyrinth to find the hidden exit (★) while gathering letters to form words. Watch your step count, each move costs one precious step. Don't worry though! You can form words to earn more steps and boost your score. The longer your words, the higher your score climbs. Plan your route wisely, explore every corner, and turn those scattered letters into lexical gold as you hunt for the elusive exit.  
+Think you're ready to become a word-blazer master?
 
 ## Installation
 
@@ -48,6 +45,7 @@ cargo install --path .
 
 ## Possible future improvements
 
-- [ ] more PowerUps.
-- [ ] main menu.
-- [ ] different modes.
+- [ ] more PowerUps
+- [ ] main menu
+- [ ] different modes
+- [ ] refactor labyrinth.rs
