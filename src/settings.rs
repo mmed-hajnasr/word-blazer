@@ -1,8 +1,8 @@
 use crate::cli::Cli;
 use clap::ValueEnum;
 use rand::random;
-use tracing::debug;
 use std::fs::read_to_string;
+use tracing::debug;
 
 const DEFAULT_WORDS: &str = include_str!("../resources/all-words-5200.txt");
 const SIMPLE_WORDS: &str = include_str!("../resources/words-simple-1000.txt");
@@ -35,7 +35,7 @@ pub enum Difficulty {
 impl Settings {
     fn new(difficulty: Difficulty) -> Self {
         let seed: u64 = random();
-        debug!("the seed is {}",seed);
+        debug!("the seed is {}", seed);
         match difficulty {
             Difficulty::Easy => Self {
                 height: 10,
