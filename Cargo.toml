@@ -12,12 +12,12 @@ build = "build.rs"
 [dependencies]
 better-panic = "0.3.0"
 clap = { version = "4.5.20", features = [
-    "derive",
-    "cargo",
-    "wrap_help",
-    "unicode",
-    "string",
-    "unstable-styles",
+  "derive",
+  "cargo",
+  "wrap_help",
+  "unicode",
+  "string",
+  "unstable-styles",
 ] }
 color-eyre = "0.6.3"
 config = "0.14.0"
@@ -47,3 +47,24 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter", "serde"] }
 [build-dependencies]
 anyhow = "1.0.90"
 vergen-gix = { version = "1.0.2", features = ["build", "cargo"] }
+
+# this is for static linking.
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = 'abort'
+strip = true
+
+[target.'cfg(target_env = "musl")']
+rustflags = ["-C", "target-feature=+crt-static"]
+
+# Optional: If you want to ensure static linking for specific targets
+[target.x86_64-unknown-linux-musl]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.aarch64-unknown-linux-musl]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.i686-unknown-linux-musl]
+rustflags = ["-C", "target-feature=+crt-static"]
