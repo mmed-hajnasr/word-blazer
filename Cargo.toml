@@ -1,6 +1,6 @@
 [package]
 name = "word-blazer"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "a TUI Labyrinth game that takes advatage of multiple graph alguorithms."
 authors = ["mmed <mmed.benhadjnasr@gmail.com>"]

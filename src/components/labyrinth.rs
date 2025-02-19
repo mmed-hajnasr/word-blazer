@@ -42,7 +42,9 @@ impl Labyrinth {
             maze: Maze::new(&settings),
             matcher: Matcher::new(settings.words.clone()),
             notification: (Color::Reset, "".to_string()),
-            notif_backup: "Welcome to the maze".to_string(),
+            notif_backup:
+                "Welcome to the maze:\n use <wasd> or arrows to move and <enter> to confirm move."
+                    .to_string(),
             steps: settings.steps,
             words: settings.words,
             ..Default::default()
@@ -336,7 +338,7 @@ impl Component for Labyrinth {
         }
         let [score, notif, maze] = Layout::vertical([
             Constraint::Length(3),
-            Constraint::Length(3),
+            Constraint::Length(4),
             Constraint::Fill(1),
         ])
         .areas(area);
