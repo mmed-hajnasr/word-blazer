@@ -145,7 +145,7 @@ mod tests {
     }
 
     #[test]
-    fn test_full_text_match() {
+    fn test_repetitive_prefixes_matches() {
         let words: Vec<String> = ["a", "aa", "aaa"].iter().map(|&s| s.to_string()).collect();
         let mut matcher: Matcher = Matcher::new(words);
         let text: String = "aaa".to_string();

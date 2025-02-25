@@ -26,7 +26,7 @@ Think you're ready to become a word-blazer master?
 
 1. **Download the Binary:**
 
-Head over to the project's releases on GitHub: [v0.1.0 release](https://github.com/mmed-hajnasr/word-blazer/releases/tag/v0.1.0). There, you'll find pre-built binaries for various operating systems. Download the binary that corresponds to your system.
+Head over to the project's releases on GitHub: [v0.1.1 release](https://github.com/mmed-hajnasr/word-blazer/releases/tag/v0.1.1). There, you'll find pre-built binaries for various operating systems. Download the binary that corresponds to your system.
 
 2. **Extract and run the binary:**
 
@@ -41,6 +41,26 @@ Head over to the project's releases on GitHub: [v0.1.0 release](https://github.c
 git clone git@github.com:mmed-hajnasr/word-blazer.git
 cd word-blazer
 cargo install --path .
+```
+
+## project-structure
+
+```
+    src
+    ├── action.rs   //game actions defined here like movement.
+    ├── app.rs      //the main interface that manages the componenets of the app.
+    ├── cli.rs      //the cli interface for picking the settings before starting the game.
+    ├── components  //contains the the sole component of the game.
+    │   └── labyrinth.rs // most gameplay implemented here.
+    ├── components.rs
+    ├── config.rs   // manages the config file that contains the keybindings.
+    ├── errors.rs   // manages custom made errors.(none were needed).
+    ├── logging.rs  // self explanatory.
+    ├── main.rs     // main game loop.
+    ├── matcher.rs  // the aho-corasick implementation.
+    ├── maze.rs     // implementation of the maze genaration and handeling.
+    ├── settings.rs // definition of game options and constants.
+    └── tui.rs      
 ```
 
 ## Possible future improvements

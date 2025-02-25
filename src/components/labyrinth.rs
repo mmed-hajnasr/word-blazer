@@ -1,19 +1,18 @@
-use rand::{thread_rng, Rng};
-use std::{
-    cmp::{max, min},
-    collections::BTreeSet,
-};
-
 use super::Component;
 use crate::{
     action::Action,
     config::Config,
     matcher::Matcher,
-    maze::{Maze, MazeCell, PowerUP},
+    maze::{Maze, MazeCell, PowerUP, VisibleArea},
     settings::Settings,
 };
 use color_eyre::{eyre::Ok, Result};
+use rand::{thread_rng, Rng};
 use ratatui::{prelude::*, widgets::*};
+use std::{
+    cmp::{max, min},
+    collections::BTreeSet,
+};
 use tokio::sync::mpsc::UnboundedSender;
 
 const LOST_MESSAGE: &str = include_str!("../../resources/lost_message.txt");
@@ -53,6 +52,7 @@ impl Labyrinth {
         ans
     }
 
+    /// prints the description of selected power up.
     fn show_selected(&mut self) {
         if let Some(power) = self.visible.get_powerup() {
             self.notification.0 = power.color();
@@ -63,6 +63,7 @@ impl Labyrinth {
         }
     }
 
+    /// handles the confirmation of a movement.
     fn confirm(&mut self) {
         let x = self.visible.selected.0;
         let y = self.visible.selected.1;
@@ -143,11 +144,13 @@ impl Labyrinth {
         }
     }
 
+    /// calculates the score based on the length of the word.
     fn score(s: &str) -> usize {
         let l = s.len() + 2;
         l * (l / 3)
     }
 
+    /// regenerate the visible area based on the new position.
     fn update_visual(&mut self) {
         // Calculate sight radius based on Helios Torch power-ups
         let sight_radius = 3 + self
@@ -231,58 +234,6 @@ impl Labyrinth {
     }
 }
 
-impl From<&VisibleArea> for Table<'_> {
-    fn from(visible: &VisibleArea) -> Self {
-        let width: usize = visible.cells[0].len();
-        let widths = vec![Constraint::Length(3); width];
-        let mid: usize = visible.cells.len() / 2;
-        let n: i32 = visible.cells.len() as i32;
-        let m: i32 = visible.cells[0].len() as i32;
-
-        let mut cells: Vec<Vec<Cell>> = visible
-            .cells
-            .iter()
-            .map(|row| row.iter().map(Cell::from).collect::<Vec<Cell>>())
-            .collect();
-        cells[mid][mid] = Cell::new(" ◎ ");
-        cells[visible.selected.0][visible.selected.1] = cells[visible.selected.0]
-            [visible.selected.1]
-            .clone()
-            .reversed();
-
-        for &(x, y) in visible.thread.iter() {
-            let vx: i32 = x - visible.offset.0;
-            let vy: i32 = y - visible.offset.1;
-            if vx >= 0 && vx < n && vy >= 0 && vy < m {
-                let vx: usize = vx as usize;
-                let vy: usize = vy as usize;
-                cells[vx][vy] = cells[vx][vy].clone().bg(Color::Yellow)
-            }
-        }
-        let table: Table = cells.iter().map(|row| Row::new(row.clone())).collect();
-        table.column_spacing(0).widths(widths)
-    }
-}
-
-impl From<&MazeCell> for Cell<'_> {
-    fn from(cell: &MazeCell) -> Self {
-        if cell.exit {
-            return Cell::new(" ★ ").fg(Color::Magenta);
-        }
-        if cell.wall {
-            return Cell::new("").bg(Color::White);
-        }
-        if cell.visited {
-            return Cell::new(" ☐ ");
-        }
-        if let Some(power) = cell.power_up {
-            Cell::new(Text::from(cell.value.to_string()).centered()).fg(power.color())
-        } else {
-            Cell::new(Text::from(cell.value.to_string()).centered())
-        }
-    }
-}
-
 impl Component for Labyrinth {
     fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
         self.command_tx = Some(tx);
@@ -318,6 +269,8 @@ impl Component for Labyrinth {
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
+
+        // show the lose screen.
         if self.lost {
             let lost_board = Paragraph::new(LOST_MESSAGE)
                 .fg(Color::Red)
@@ -326,6 +279,8 @@ impl Component for Labyrinth {
             frame.render_widget(lost_board, area);
             return Ok(());
         }
+
+        // show the win screen.
         if self.won {
             let lost_board = Paragraph::new(
                 WIN_MESSAGE.to_owned() + "\nyou're score is " + &self.score.to_string(),
@@ -361,14 +316,14 @@ impl Component for Labyrinth {
             .alignment(Alignment::Center);
         frame.render_widget(score_board, score_area);
 
-        // Render second bordered text
+        // Render the notification board.
         let notification_board = Paragraph::new(self.notification.1.clone())
             .fg(self.notification.0)
             .block(Block::default().borders(Borders::ALL))
             .alignment(Alignment::Center);
         frame.render_widget(notification_board, notif);
 
-        // Render table
+        // Render maze
         let diamater: u16 = self.visible.cells.len() as u16;
         let [_, center_vert, _] = Layout::vertical([
             Constraint::Fill(3),
@@ -384,23 +339,5 @@ impl Component for Labyrinth {
         .areas(center_vert);
         frame.render_widget(Table::from(&self.visible), center_horizantal);
         Ok(())
-    }
-}
-
-#[derive(Default)]
-struct VisibleArea {
-    cells: Vec<Vec<MazeCell>>,
-    selected: (usize, usize),
-    thread: BTreeSet<(i32, i32)>,
-    offset: (i32, i32),
-}
-
-impl VisibleArea {
-    fn get_powerup(&self) -> Option<PowerUP> {
-        let (i, j) = self.selected;
-        if self.cells[i][j].visited {
-            return None;
-        }
-        self.cells[i][j].power_up
     }
 }
