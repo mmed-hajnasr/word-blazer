@@ -269,7 +269,6 @@ impl Component for Labyrinth {
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> Result<()> {
-
         // show the lose screen.
         if self.lost {
             let lost_board = Paragraph::new(LOST_MESSAGE)
